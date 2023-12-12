@@ -422,62 +422,33 @@ class XEMethod(BaseMethod):
         for req in self.prepare_request().values():
             raw_response = request(req['method'], req['url'])
             raw_response.raise_for_status()
-            pre_response.update(self.response_to_dict(raw_response,
-                                                      req['ticker']))
+            pre_response.update({req['ticker']: raw_response})
         response = self.handle_response(pre_response)
 
         return response
-
-    def response_to_dict(self, response, ticker):
-        raw_dct = {}
-        soup = list(BeautifulSoup(response.text, "lxml").
-                    tbody.stripped_strings)
-        for i in range(len(soup[::4])):
-            raw_dct.update(
-                {str(ticker + soup[::4][i]):
-                     {'currency_from': ticker,
-                      'currency_to': str(soup[::4][i]),
-                      'rate': str(soup[2::4][i])}})
-            raw_dct.update(
-                {str(soup[::4][i] + ticker):
-                     {'currency_from': str(soup[::4][i]),
-                      'currency_to': ticker,
-                      'rate': str(soup[3::4][i])}})
-        return raw_dct
 
     def prepare_data(self, response):
         res_dict = {}
         date = datetime.strptime(str(timezone.now().date()),
                                  '%Y-%m-%d').strftime('%d.%m.%Y')
-        def _make_dct(base, quote, rate):
-            rate_dict = {
-                'rate_date': date,
-                'currency_from': base,
-                'currency_to': quote,
-                'rate': rate,
-                'nominal': 1,
-            }
-            return res_dict.update({(base + quote): rate_dict})
 
-        for tick in self.prepare_tickers():
-            if '*' in tick:
-                if tick[0] == '*':
-                    tick = tick.replace('*', '')
-                    for coin in response.values():
-                        if tick == coin['currency_from']:
-                            _make_dct(coin['currency_from'], coin['currency_to'],
-                                      coin['rate'])
-                elif tick[-1] == '*':
-                    tick = tick.replace('*', '')
-                    for coin in response.values():
-                        if tick == coin['currency_to']:
-                            _make_dct(coin['currency_from'], coin['currency_to'],
-                                      coin['rate'])
-            else:
-                for key, coin in response.items():
-                    if tick == key:
-                        _make_dct(coin['currency_from'], coin['currency_to'],
-                                  coin['rate'])
-                        break
+        for ticker, response in response.items():
+            soup = list(BeautifulSoup(response.text, "lxml").
+                        tbody.stripped_strings)
+            for i in range(len(soup[::4])):
+                res_dict.update(
+                    {str(ticker + soup[::4][i]):
+                         {'rate_date': date,
+                          'currency_from': ticker,
+                          'currency_to': str(soup[::4][i]),
+                          'rate': str(soup[2::4][i]),
+                          'nominal': 1}})
+                res_dict.update(
+                    {str(soup[::4][i] + ticker):
+                         {'rate_date': date,
+                          'currency_from': str(soup[::4][i]),
+                          'currency_to': ticker,
+                          'rate': str(soup[3::4][i]),
+                          'nominal': 1}})
 
         return res_dict, date
