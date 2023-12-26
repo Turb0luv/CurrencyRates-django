@@ -13,7 +13,7 @@ class CurrencyRateAdmin(admin.ModelAdmin):
         'nominal',
         'rate_date'
     ]
-    list_filter = ['currency_from', 'currency_to', 'rate_type']
+    list_filter = ['currency_from', 'currency_to', 'rate_type', 'rate_date']
 
 
 @admin.register(CurrencyRateType)
