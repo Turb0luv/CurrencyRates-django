@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from requests import request
 from bs4 import BeautifulSoup
-import lxml
 
 
 class BaseMethod(ABC):
@@ -415,6 +414,13 @@ class XEMethod(BaseMethod):
                                            date.strftime('%Y-%m-%d')),
                     'ticker': tick.replace('*', '')
                 }})
+            else:
+                request_data.update({tick: {
+                    'method': self.req_type,
+                    'url': self.url.format(tick[:3],
+                                           date.strftime('%Y-%m-%d')),
+                    'ticker': tick.replace('*', '')
+                }})
         return request_data
 
     def make_request(self):
@@ -437,17 +443,17 @@ class XEMethod(BaseMethod):
                         tbody.stripped_strings)
             for i in range(len(soup[::4])):
                 res_dict.update(
-                    {str(ticker + soup[::4][i]):
+                    {str(ticker[:3] + soup[::4][i]):
                          {'rate_date': date,
-                          'currency_from': ticker,
+                          'currency_from': ticker[:3],
                           'currency_to': str(soup[::4][i]),
                           'rate': str(soup[2::4][i]),
                           'nominal': 1}})
                 res_dict.update(
-                    {str(soup[::4][i] + ticker):
+                    {str(soup[::4][i] + ticker[:3]):
                          {'rate_date': date,
                           'currency_from': str(soup[::4][i]),
-                          'currency_to': ticker,
+                          'currency_to': ticker[:3],
                           'rate': str(soup[3::4][i]),
                           'nominal': 1}})
 
